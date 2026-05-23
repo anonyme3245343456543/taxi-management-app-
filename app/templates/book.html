@@ -34,6 +34,31 @@
           <label><span data-i18n="phone">Téléphone</span><input name="phone" autocomplete="tel" required></label>
           <label class="span-2"><span data-i18n="pickupAddress">Adresse de départ</span><input name="pickup_address" autocomplete="street-address" required></label>
           <label class="span-2"><span data-i18n="destination">Destination</span><input name="destination" required></label>
+          <div id="fare-estimate" class="fare-estimate hidden span-2" aria-live="polite">
+            <div class="estimate-heading">
+              <div>
+                <p class="eyebrow" data-i18n="estimateEyebrow">Estimation en direct</p>
+                <h3 data-i18n="estimateTitle">Estimation du trajet</h3>
+              </div>
+              <span data-i18n="estimateLive">Live</span>
+            </div>
+            <div class="estimate-grid">
+              <article>
+                <span data-i18n="estimateDistance">Distance estimée</span>
+                <strong id="estimate-distance">-</strong>
+              </article>
+              <article>
+                <span data-i18n="estimateDuration">Durée estimée</span>
+                <strong id="estimate-duration">-</strong>
+              </article>
+              <article>
+                <span data-i18n="estimatePrice">Prix estimé</span>
+                <strong id="estimate-price">-</strong>
+              </article>
+            </div>
+            <p id="estimate-status" class="estimate-status"></p>
+            <p class="estimate-note" data-i18n="estimateNote">Prix indicatif calculé avec 10 € de prise en charge, 2 €/km et 0,60 €/min. Le chauffeur confirmera le tarif final.</p>
+          </div>
           <label><span data-i18n="date">Date</span><input name="date" type="date" required></label>
           <label><span data-i18n="time">Heure</span><input name="time" type="time" required></label>
           <label><span data-i18n="passengers">Passagers</span><input name="passenger_count" type="number" min="1" max="99" value="1" required></label>
