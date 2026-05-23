@@ -146,6 +146,74 @@ h1, h2, h3, p { margin-top: 0; }
   color: var(--ink);
   font-size: 28px;
 }
+.confirmation-card {
+  margin-top: 22px;
+  border: 1px solid rgba(200, 165, 90, 0.3);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(9, 11, 16, 0.04), rgba(200, 165, 90, 0.08));
+  padding: 20px;
+}
+.confirmation-card h2 {
+  margin: 0 0 16px;
+  color: var(--ink);
+  font-size: 24px;
+  line-height: 1.15;
+}
+.confirmation-steps {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.confirmation-steps li {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  align-items: start;
+  gap: 12px;
+}
+.confirmation-steps span {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--brand);
+  font-weight: 900;
+  font-size: 13px;
+}
+.confirmation-steps p {
+  margin: 5px 0 0;
+  color: #303642;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.confirmation-note {
+  margin: 18px 0 0;
+  border-left: 3px solid var(--brand);
+  background: rgba(255, 255, 255, 0.7);
+  color: #2f3440;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+.trust-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.trust-badges span {
+  border: 1px solid rgba(9, 11, 16, 0.12);
+  border-radius: 999px;
+  background: #fff;
+  color: #3d3219;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 900;
+}
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -382,6 +450,10 @@ dialog::backdrop { background: rgba(17, 24, 39, 0.52); }
 [dir="rtl"] .nav-item { text-align: right; }
 [dir="rtl"] .row-actions { justify-content: flex-start; }
 [dir="rtl"] .modal-actions { justify-content: flex-start; }
+[dir="rtl"] .confirmation-note {
+  border-left: 0;
+  border-right: 3px solid var(--brand);
+}
 [dir="rtl"] input,
 [dir="rtl"] textarea,
 [dir="rtl"] select {
