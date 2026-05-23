@@ -2,16 +2,18 @@
   color-scheme: light;
   --bg: #f6f7f9;
   --surface: #ffffff;
-  --surface-2: #eef2f7;
-  --text: #172033;
+  --surface-2: #f0f2f5;
+  --text: #15171d;
   --muted: #667085;
   --line: #d9dee8;
-  --brand: #0f766e;
-  --brand-dark: #115e59;
+  --brand: #c8a55a;
+  --brand-dark: #9f7f35;
+  --gold-soft: #f5ead1;
+  --ink: #090b10;
   --danger: #b42318;
   --warning: #b45309;
   --ok: #047857;
-  --shadow: 0 18px 45px rgba(23, 32, 51, 0.1);
+  --shadow: 0 18px 45px rgba(12, 15, 22, 0.13);
 }
 
 * { box-sizing: border-box; }
@@ -53,8 +55,8 @@ h1, h2, h3, p { margin-top: 0; }
 }
 .language-option.active {
   border-color: var(--brand);
-  background: var(--brand);
-  color: #fff;
+  background: var(--ink);
+  color: var(--brand);
 }
 .eyebrow {
   margin-bottom: 8px;
@@ -67,30 +69,59 @@ h1, h2, h3, p { margin-top: 0; }
 
 .public-page {
   background:
-    linear-gradient(rgba(12, 25, 32, 0.68), rgba(12, 25, 32, 0.68)),
-    url("https://images.unsplash.com/photo-1511527844068-006b95d162c2?auto=format&fit=crop&w=1800&q=80") center/cover fixed;
+    radial-gradient(circle at 18% 32%, rgba(200, 165, 90, 0.28), transparent 28%),
+    linear-gradient(105deg, rgba(3, 5, 9, 0.94) 0%, rgba(5, 7, 12, 0.82) 43%, rgba(5, 7, 12, 0.54) 100%),
+    url("https://images.unsplash.com/photo-1676833647260-47c423b39334?auto=format&fit=crop&fm=jpg&q=82&w=2600") center/cover fixed;
+  background-color: #05070c;
 }
 .booking-shell {
-  width: min(1100px, calc(100% - 32px));
+  width: min(1180px, calc(100% - 32px));
   min-height: 100vh;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 0.85fr 1.15fr;
+  grid-template-columns: 1.02fr 0.98fr;
   align-items: center;
-  gap: 44px;
+  gap: 56px;
   padding: 76px 0 48px;
 }
 .booking-intro { color: white; }
 .booking-intro h1 {
-  max-width: 520px;
-  margin-bottom: 16px;
-  font-size: clamp(42px, 7vw, 76px);
+  max-width: 680px;
+  margin-bottom: 18px;
+  color: #fff;
+  font-size: clamp(44px, 7vw, 82px);
   line-height: 0.95;
+  text-shadow: 0 18px 42px rgba(0, 0, 0, 0.45);
 }
-.booking-intro p:last-child {
-  max-width: 460px;
-  color: rgba(255,255,255,0.86);
+.booking-intro > p[data-i18n="bookingIntro"] {
+  max-width: 560px;
+  color: rgba(255,255,255,0.88);
   font-size: 18px;
+  line-height: 1.55;
+}
+.booking-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-width: 620px;
+  margin: 28px 0 20px;
+}
+.booking-highlights span {
+  border: 1px solid rgba(200, 165, 90, 0.48);
+  border-radius: 999px;
+  background: rgba(8, 10, 15, 0.58);
+  color: #f8ecd0;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  backdrop-filter: blur(10px);
+}
+.vehicle-note {
+  max-width: 560px;
+  margin-bottom: 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 15px;
+  line-height: 1.55;
 }
 
 .panel {
@@ -99,6 +130,21 @@ h1, h2, h3, p { margin-top: 0; }
   border-radius: 8px;
   box-shadow: var(--shadow);
   padding: 24px;
+}
+.public-page .panel {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(200, 165, 90, 0.34);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
+}
+.booking-form-heading {
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(200, 165, 90, 0.28);
+}
+.booking-form-heading h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 28px;
 }
 .form-grid {
   display: grid;
@@ -135,8 +181,10 @@ input:focus, textarea:focus, select:focus {
   padding: 10px 14px;
   font-weight: 800;
 }
-.primary { background: var(--brand); color: white; }
-.primary:hover { background: var(--brand-dark); }
+.primary { background: var(--ink); color: #fff; }
+.primary:hover { background: #1a1d25; }
+.public-page .primary { background: linear-gradient(135deg, #090b10, #232733); color: #f7e7bd; }
+.public-page .primary:hover { background: linear-gradient(135deg, #151922, #090b10); }
 .primary:disabled { opacity: 0.65; cursor: wait; }
 .ghost { background: var(--surface-2); color: var(--text); }
 .message {
@@ -316,6 +364,7 @@ dialog::backdrop { background: rgba(17, 24, 39, 0.52); }
   .language-option span:last-child { display: none; }
   .booking-shell, .app-shell { grid-template-columns: 1fr; }
   .booking-shell { align-items: start; gap: 24px; padding-top: 24px; }
+  .booking-highlights { margin-top: 22px; }
   .app-shell { display: block; }
   .sidebar {
     position: static;
