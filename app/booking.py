@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 
 from .db import execute, fetch_one
+from .notifications import notify_booking_created
 from .validation import optional_text, parse_date, parse_passenger_count, parse_time, required_text
 
 
@@ -65,6 +66,18 @@ def create_public_booking():
             passenger_count,
             notes,
         ),
+    )
+    notify_booking_created(
+        {
+            "name": name,
+            "phone": phone,
+            "pickup_address": pickup_address,
+            "destination": destination,
+            "date": appointment_date.isoformat(),
+            "time": appointment_time.strftime("%H:%M"),
+            "passenger_count": passenger_count,
+            "notes": notes,
+        }
     )
 
     return jsonify(
