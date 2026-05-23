@@ -8,6 +8,11 @@ const estimatePrice = document.querySelector("#estimate-price");
 const estimateStatus = document.querySelector("#estimate-status");
 const pickupInput = form.elements.pickup_address;
 const destinationInput = form.elements.destination;
+const dateInput = form.elements.date;
+const timeInput = form.elements.time;
+const bookingTypeInputs = [...form.querySelectorAll("input[name='booking_type']")];
+const scheduleFields = [...form.querySelectorAll(".schedule-field")];
+const urgentBookingMessage = document.querySelector("#urgent-booking-message");
 
 const pricing = {
   baseFee: 10,
@@ -44,12 +49,48 @@ function setMessage(text, type = "") {
   message.className = `message span-2 ${type}`.trim();
 }
 
+function padDatePart(value) {
+  return String(value).padStart(2, "0");
+}
+
+function localDateValue(date) {
+  return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`;
+}
+
+function localTimeValue(date) {
+  return `${padDatePart(date.getHours())}:${padDatePart(date.getMinutes())}`;
+}
+
+function selectedBookingType() {
+  return form.elements.booking_type?.value || "scheduled";
+}
+
+function setCurrentRideDateTime() {
+  const now = new Date();
+  dateInput.value = localDateValue(now);
+  timeInput.value = localTimeValue(now);
+}
+
+function updateRideTiming(refreshImmediateTime = false) {
+  const isImmediate = selectedBookingType() === "immediate";
+  scheduleFields.forEach((field) => field.classList.toggle("hidden", isImmediate));
+  urgentBookingMessage.classList.toggle("hidden", !isImmediate);
+  dateInput.required = !isImmediate;
+  timeInput.required = !isImmediate;
+
+  if (isImmediate && (refreshImmediateTime || !dateInput.value || !timeInput.value)) {
+    setCurrentRideDateTime();
+  }
+}
+
 function payloadFromForm(formElement) {
+  if (selectedBookingType() === "immediate") setCurrentRideDateTime();
   return Object.fromEntries(new FormData(formElement).entries());
 }
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  updateRideTiming(true);
   if (!form.checkValidity()) {
     form.reportValidity();
     return;
@@ -70,6 +111,8 @@ form.addEventListener("submit", async (event) => {
     if (!response.ok) throw new Error(data.error || t("bookingError"));
     form.reset();
     form.passenger_count.value = "1";
+    form.elements.booking_type.value = "scheduled";
+    updateRideTiming();
     hideEstimate();
     hideAllAddressSuggestions();
     setMessage(t("bookingSuccess"), "success");
@@ -316,8 +359,14 @@ addressAutocompleteFields.forEach((field) => {
   });
 });
 
+bookingTypeInputs.forEach((input) => {
+  input.addEventListener("change", () => updateRideTiming(true));
+});
+
 document.addEventListener("click", (event) => {
   addressAutocompleteFields.forEach((field) => {
     if (!field.input.closest(".address-field").contains(event.target)) hideAddressSuggestions(field);
   });
 });
+
+updateRideTiming();

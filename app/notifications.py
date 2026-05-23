@@ -7,12 +7,15 @@ from flask import current_app
 
 def format_booking_notification(booking):
     notes = booking.get("notes") or "-"
+    booking_type = booking.get("booking_type") or "scheduled"
+    booking_type_label = "Immediate (within the hour)" if booking_type == "immediate" else "Scheduled"
     return "\n".join(
         [
             "New taxi booking",
             "",
             f"Client: {booking['name']}",
             f"Phone: {booking['phone']}",
+            f"Booking type: {booking_type_label}",
             f"Pickup: {booking['pickup_address']}",
             f"Destination: {booking['destination']}",
             f"Date: {booking['date']}",

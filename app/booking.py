@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask import Blueprint, jsonify, request
 
 from .db import execute, fetch_one
@@ -40,8 +42,16 @@ def create_public_booking():
         phone = required_text(payload, "phone", "Phone")
         pickup_address = required_text(payload, "pickup_address", "Pickup address")
         destination = required_text(payload, "destination", "Destination")
-        appointment_date = parse_date(payload)
-        appointment_time = parse_time(payload)
+        booking_type = str(payload.get("booking_type") or "scheduled").strip().lower()
+        if booking_type not in {"scheduled", "immediate"}:
+            booking_type = "scheduled"
+        if booking_type == "immediate" and (not payload.get("date") or not payload.get("time")):
+            now = datetime.now()
+            appointment_date = now.date()
+            appointment_time = now.time().replace(second=0, microsecond=0)
+        else:
+            appointment_date = parse_date(payload)
+            appointment_time = parse_time(payload)
         passenger_count = parse_passenger_count(payload)
         notes = optional_text(payload, "notes")
     except ValueError as exc:
@@ -75,6 +85,7 @@ def create_public_booking():
             "destination": destination,
             "date": appointment_date.isoformat(),
             "time": appointment_time.strftime("%H:%M"),
+            "booking_type": booking_type,
             "passenger_count": passenger_count,
             "notes": notes,
         }

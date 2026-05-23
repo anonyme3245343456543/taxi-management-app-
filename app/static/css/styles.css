@@ -280,6 +280,58 @@ h1, h2, h3, p { margin-top: 0; }
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
+.ride-timing {
+  display: grid;
+  gap: 10px;
+}
+.ride-timing > p {
+  margin: 0;
+  color: #344054;
+  font-size: 14px;
+  font-weight: 800;
+}
+.ride-timing-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.ride-timing-option {
+  min-height: 48px;
+  border: 1px solid rgba(200, 165, 90, 0.34);
+  border-radius: 8px;
+  background: #fff;
+  color: #262b35;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  font-weight: 900;
+}
+.ride-timing-option:has(input:checked) {
+  border-color: var(--brand);
+  background: linear-gradient(135deg, #090b10, #232733);
+  color: #f8e7ba;
+}
+.ride-timing-option input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  min-height: auto;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  accent-color: var(--brand);
+}
+.urgent-booking-message {
+  border: 1px solid rgba(200, 165, 90, 0.42);
+  border-radius: 8px;
+  background: #fbf4e4;
+  color: #3d3219;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 900;
+}
 .address-field {
   position: relative;
   display: grid;
@@ -570,6 +622,7 @@ dialog::backdrop { background: rgba(17, 24, 39, 0.52); }
 @media (max-width: 620px) {
   .estimate-grid { grid-template-columns: 1fr; }
   .address-suggestions { max-height: 220px; }
+  .ride-timing-options { grid-template-columns: 1fr; }
   .form-grid, .modal-form { grid-template-columns: 1fr; }
   .span-2, .modal-form h3, .modal-actions { grid-column: span 1; }
   .row-card { grid-template-columns: 1fr; }

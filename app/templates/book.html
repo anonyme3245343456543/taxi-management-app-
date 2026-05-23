@@ -12,7 +12,7 @@
       <section class="booking-intro">
         <p class="eyebrow" data-i18n="bookingEyebrow">Chauffeur privé à Paris</p>
         <h1 data-i18n="bookingTitle">Transport VIP en Lexus ES300</h1>
-        <p data-i18n="bookingIntro">Réservez un chauffeur discret pour vos transferts aéroport, rendez-vous et trajets premium dans Paris.</p>
+        <p data-i18n="bookingIntro">Réservez un chauffeur discret pour vos transferts aéroport, rendez-vous et trajets premium dans Paris et toute l’Île-de-France.</p>
         <div class="booking-highlights" aria-label="Services premium">
           <span data-i18n="vipTransport">Transport VIP</span>
           <span data-i18n="airportTransfers">Transferts aéroport</span>
@@ -20,8 +20,9 @@
           <span data-i18n="comfort">Confort premium</span>
           <span data-i18n="discretion">Discrétion</span>
           <span data-i18n="fiveStarService">Service 5 étoiles</span>
+          <span data-i18n="vehicleAtDisposal">Mise à disposition</span>
         </div>
-        <p class="vehicle-note" data-i18n="vehicleNote">Berline noire élégante, inspiration Lexus ES300, pour une arrivée sereine et professionnelle.</p>
+        <p class="vehicle-note" data-i18n="vehicleNote">Berline noire élégante pour une arrivée sereine et professionnelle.</p>
       </section>
 
       <section class="panel booking-panel">
@@ -66,8 +67,22 @@
             </div>
             <p id="estimate-status" class="estimate-status"></p>
           </div>
-          <label><span data-i18n="date">Date</span><input name="date" type="date" required></label>
-          <label><span data-i18n="time">Heure</span><input name="time" type="time" required></label>
+          <div class="ride-timing span-2" role="radiogroup" aria-labelledby="ride-timing-title">
+            <p id="ride-timing-title" data-i18n="rideTimingLabel">Quand souhaitez-vous partir ?</p>
+            <div class="ride-timing-options">
+              <label class="ride-timing-option">
+                <input type="radio" name="booking_type" value="scheduled" checked>
+                <span data-i18n="scheduledRide">Réservation planifiée</span>
+              </label>
+              <label class="ride-timing-option">
+                <input type="radio" name="booking_type" value="immediate">
+                <span data-i18n="immediateRide">Immédiat (dans l’heure)</span>
+              </label>
+            </div>
+            <div id="urgent-booking-message" class="urgent-booking-message hidden" data-i18n="urgentSearchMessage">Recherche immédiate d’un chauffeur disponible</div>
+          </div>
+          <label class="schedule-field"><span data-i18n="date">Date</span><input name="date" type="date" required></label>
+          <label class="schedule-field"><span data-i18n="time">Heure</span><input name="time" type="time" required></label>
           <label><span data-i18n="passengers">Passagers</span><input name="passenger_count" type="number" min="1" max="99" value="1" required></label>
           <label class="span-2"><span data-i18n="notes">Notes</span><textarea name="notes" rows="4"></textarea></label>
           <div id="booking-message" class="message span-2" aria-live="polite"></div>
@@ -80,8 +95,8 @@
           <ol class="confirmation-steps">
             <li><span>1</span><p data-i18n="confirmationStep1">Le client envoie sa demande de trajet</p></li>
             <li><span>2</span><p data-i18n="confirmationStep2">Le chauffeur reçoit la demande instantanément</p></li>
-            <li><span>3</span><p data-i18n="confirmationStep3">Le chauffeur vérifie la disponibilité et le prix</p></li>
-            <li><span>4</span><p data-i18n="confirmationStep4">Le client est rappelé ou contacté rapidement pour confirmer</p></li>
+            <li><span>3</span><p data-i18n="confirmationStep3">La plateforme recontacte le client et valide la commande</p></li>
+            <li><span>4</span><p data-i18n="confirmationStep4">Le client reçoit un récapitulatif et n’a plus qu’à s’installer à bord et profiter de son trajet !</p></li>
           </ol>
           <p class="confirmation-note" data-i18n="confirmationNote">Votre demande de réservation n’est pas automatiquement confirmée : elle devient définitive uniquement après validation du chauffeur.</p>
           <div class="trust-badges">
