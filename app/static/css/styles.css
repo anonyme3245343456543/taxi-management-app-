@@ -275,16 +275,15 @@ h1, h2, h3, p { margin-top: 0; }
   font-weight: 800;
 }
 .fare-estimate:not(.loading) .estimate-status:empty { display: none; }
-.estimate-note {
-  margin: 12px 0 0;
-  color: rgba(255, 255, 255, 0.66);
-  font-size: 12px;
-  line-height: 1.45;
-}
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+}
+.address-field {
+  position: relative;
+  display: grid;
+  gap: 7px;
 }
 label {
   display: grid;
@@ -308,6 +307,47 @@ input:focus, textarea:focus, select:focus {
   border-color: var(--brand);
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.16);
 }
+.address-suggestions {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  max-height: 250px;
+  overflow-y: auto;
+  border: 1px solid rgba(200, 165, 90, 0.34);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 22px 44px rgba(9, 11, 16, 0.2);
+  padding: 6px;
+}
+.address-option {
+  width: 100%;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  text-align: left;
+}
+.address-option:hover,
+.address-option:focus {
+  background: #fbf4e4;
+  outline: none;
+}
+.address-option strong {
+  color: #151922;
+  font-size: 14px;
+}
+.address-option span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+html[dir="rtl"] .address-option { text-align: right; }
 .span-2 { grid-column: span 2; }
 .primary, .ghost, .nav-item {
   min-height: 42px;
@@ -529,6 +569,7 @@ dialog::backdrop { background: rgba(17, 24, 39, 0.52); }
 
 @media (max-width: 620px) {
   .estimate-grid { grid-template-columns: 1fr; }
+  .address-suggestions { max-height: 220px; }
   .form-grid, .modal-form { grid-template-columns: 1fr; }
   .span-2, .modal-form h3, .modal-actions { grid-column: span 1; }
   .row-card { grid-template-columns: 1fr; }

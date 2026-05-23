@@ -23,6 +23,20 @@ const localeByLanguage = {
 let estimateTimer;
 let estimateAbortController;
 let latestEstimate;
+const addressAutocompleteFields = [
+  {
+    input: pickupInput,
+    menu: document.querySelector("[data-address-suggestions='pickup']"),
+    timer: null,
+    controller: null,
+  },
+  {
+    input: destinationInput,
+    menu: document.querySelector("[data-address-suggestions='destination']"),
+    timer: null,
+    controller: null,
+  },
+];
 
 
 function setMessage(text, type = "") {
@@ -57,6 +71,7 @@ form.addEventListener("submit", async (event) => {
     form.reset();
     form.passenger_count.value = "1";
     hideEstimate();
+    hideAllAddressSuggestions();
     setMessage(t("bookingSuccess"), "success");
   } catch (error) {
     setMessage(error.message, "error");
@@ -71,6 +86,7 @@ document.addEventListener("languagechange", () => {
   button.textContent = button.disabled ? t("submitting") : t("submitBooking");
   if (latestEstimate) renderEstimate(latestEstimate);
   if (estimateCard.classList.contains("loading")) estimateStatus.textContent = t("estimateLoading");
+  hideAllAddressSuggestions();
 });
 
 
@@ -123,10 +139,10 @@ function renderEstimate(estimate) {
   estimateStatus.textContent = "";
 }
 
-async function geocodeAddress(address, signal) {
+async function fetchPhotonFeatures(query, signal, limit = 1) {
   const params = new URLSearchParams({
-    q: address,
-    limit: "1",
+    q: query,
+    limit: String(limit),
     lat: "48.8566",
     lon: "2.3522",
     lang: window.TaxiI18n.currentLanguage(),
@@ -134,9 +150,109 @@ async function geocodeAddress(address, signal) {
   const response = await fetch(`https://photon.komoot.io/api/?${params.toString()}`, { signal });
   if (!response.ok) throw new Error("Geocoding failed");
   const data = await response.json();
-  const coordinates = data.features?.[0]?.geometry?.coordinates;
+  return Array.isArray(data.features) ? data.features : [];
+}
+
+async function geocodeAddress(address, signal) {
+  const feature = (await fetchPhotonFeatures(address, signal, 1))[0];
+  const coordinates = feature?.geometry?.coordinates;
   if (!Array.isArray(coordinates) || coordinates.length < 2) throw new Error("Address not found");
   return { lon: coordinates[0], lat: coordinates[1] };
+}
+
+function addressSuggestionFromFeature(feature) {
+  const properties = feature.properties || {};
+  const street = [properties.housenumber, properties.street].filter(Boolean).join(" ");
+  const place = properties.name || street || properties.city || properties.county || properties.state || properties.country;
+  const cityLine = [properties.postcode, properties.city || properties.county || properties.state].filter(Boolean).join(" ");
+  const detailParts = [street && street !== place ? street : "", cityLine, properties.country].filter(Boolean);
+  const secondary = [...new Set(detailParts)].join(", ");
+  const label = [place, secondary].filter(Boolean).join(", ");
+
+  if (!label) return null;
+  return {
+    label,
+    main: place || label,
+    secondary,
+  };
+}
+
+function hideAddressSuggestions(field) {
+  clearTimeout(field.timer);
+  if (field.controller) field.controller.abort();
+  field.controller = null;
+  field.menu.replaceChildren();
+  field.menu.classList.add("hidden");
+  field.input.setAttribute("aria-expanded", "false");
+}
+
+function hideAllAddressSuggestions() {
+  addressAutocompleteFields.forEach(hideAddressSuggestions);
+}
+
+function selectAddressSuggestion(field, suggestion) {
+  field.input.value = suggestion.label;
+  field.input.focus();
+  hideAddressSuggestions(field);
+  scheduleEstimate(0);
+}
+
+function renderAddressSuggestions(field, suggestions) {
+  if (!suggestions.length) {
+    hideAddressSuggestions(field);
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  suggestions.forEach((suggestion, index) => {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "address-option";
+    option.id = `${field.menu.id}-option-${index}`;
+    option.setAttribute("role", "option");
+
+    const main = document.createElement("strong");
+    main.textContent = suggestion.main;
+    option.append(main);
+
+    if (suggestion.secondary) {
+      const secondary = document.createElement("span");
+      secondary.textContent = suggestion.secondary;
+      option.append(secondary);
+    }
+
+    option.addEventListener("mousedown", (event) => event.preventDefault());
+    option.addEventListener("click", () => selectAddressSuggestion(field, suggestion));
+    fragment.append(option);
+  });
+
+  field.menu.replaceChildren(fragment);
+  field.menu.classList.remove("hidden");
+  field.input.setAttribute("aria-expanded", "true");
+}
+
+function scheduleAddressSuggestions(field) {
+  clearTimeout(field.timer);
+  if (field.controller) field.controller.abort();
+
+  const query = field.input.value.trim();
+  if (query.length < 3) {
+    hideAddressSuggestions(field);
+    return;
+  }
+
+  field.timer = setTimeout(async () => {
+    const controller = new AbortController();
+    field.controller = controller;
+    try {
+      const features = await fetchPhotonFeatures(query, controller.signal, 5);
+      if (field.controller !== controller) return;
+      const suggestions = features.map(addressSuggestionFromFeature).filter(Boolean);
+      renderAddressSuggestions(field, suggestions);
+    } catch (error) {
+      if (error.name !== "AbortError" && field.controller === controller) hideAddressSuggestions(field);
+    }
+  }, 300);
 }
 
 async function routeBetween(origin, destination, signal) {
@@ -158,7 +274,7 @@ async function routeBetween(origin, destination, signal) {
   };
 }
 
-function scheduleEstimate() {
+function scheduleEstimate(delay = 650) {
   clearTimeout(estimateTimer);
   if (estimateAbortController) estimateAbortController.abort();
 
@@ -183,10 +299,25 @@ function scheduleEstimate() {
     } catch (error) {
       if (error.name !== "AbortError" && estimateAbortController === controller) hideEstimate();
     }
-  }, 650);
+  }, delay);
 }
 
-[pickupInput, destinationInput].forEach((input) => {
-  input.addEventListener("input", scheduleEstimate);
-  input.addEventListener("change", scheduleEstimate);
+addressAutocompleteFields.forEach((field) => {
+  field.menu.id = field.menu.id || `${field.input.id}-suggestions`;
+  field.input.setAttribute("aria-controls", field.menu.id);
+  field.input.addEventListener("input", () => {
+    scheduleEstimate();
+    scheduleAddressSuggestions(field);
+  });
+  field.input.addEventListener("change", () => scheduleEstimate());
+  field.input.addEventListener("focus", () => scheduleAddressSuggestions(field));
+  field.input.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") hideAddressSuggestions(field);
+  });
+});
+
+document.addEventListener("click", (event) => {
+  addressAutocompleteFields.forEach((field) => {
+    if (!field.input.closest(".address-field").contains(event.target)) hideAddressSuggestions(field);
+  });
 });
