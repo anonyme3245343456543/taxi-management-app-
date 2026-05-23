@@ -1,5 +1,6 @@
 const form = document.querySelector("#booking-form");
 const message = document.querySelector("#booking-message");
+const t = window.TaxiI18n.t;
 
 function setMessage(text, type = "") {
   message.textContent = text;
@@ -19,7 +20,7 @@ form.addEventListener("submit", async (event) => {
 
   const button = form.querySelector("button[type='submit']");
   button.disabled = true;
-  button.textContent = "Submitting...";
+  button.textContent = t("submitting");
   setMessage("");
 
   try {
@@ -29,14 +30,19 @@ form.addEventListener("submit", async (event) => {
       body: JSON.stringify(payloadFromForm(form)),
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Unable to submit booking");
+    if (!response.ok) throw new Error(data.error || t("bookingError"));
     form.reset();
     form.passenger_count.value = "1";
-    setMessage("Your booking request was sent successfully.", "success");
+    setMessage(t("bookingSuccess"), "success");
   } catch (error) {
     setMessage(error.message, "error");
   } finally {
     button.disabled = false;
-    button.textContent = "Submit booking";
+    button.textContent = t("submitBooking");
   }
+});
+
+document.addEventListener("languagechange", () => {
+  const button = form.querySelector("button[type='submit']");
+  button.textContent = button.disabled ? t("submitting") : t("submitBooking");
 });

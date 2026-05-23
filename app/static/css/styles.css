@@ -26,6 +26,36 @@ button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 h1, h2, h3, p { margin-top: 0; }
 .hidden { display: none !important; }
+.language-switcher {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: min(420px, calc(100vw - 28px));
+}
+.language-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #172033;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(23, 32, 51, 0.12);
+}
+.language-option.active {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #fff;
+}
 .eyebrow {
   margin-bottom: 8px;
   color: var(--brand);
@@ -48,7 +78,7 @@ h1, h2, h3, p { margin-top: 0; }
   grid-template-columns: 0.85fr 1.15fr;
   align-items: center;
   gap: 44px;
-  padding: 48px 0;
+  padding: 76px 0 48px;
 }
 .booking-intro { color: white; }
 .booking-intro h1 {
@@ -122,7 +152,7 @@ input:focus, textarea:focus, select:focus {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: 72px 24px 24px;
 }
 .login-panel {
   width: min(420px, 100%);
@@ -143,7 +173,7 @@ input:focus, textarea:focus, select:focus {
   display: flex;
   flex-direction: column;
   gap: 26px;
-  padding: 24px;
+  padding: 72px 24px 24px;
   background: #111827;
   color: white;
 }
@@ -159,7 +189,7 @@ input:focus, textarea:focus, select:focus {
 .sidebar .ghost { margin-top: auto; background: rgba(255,255,255,0.1); color: white; }
 .workspace {
   min-width: 0;
-  padding: 28px;
+  padding: 72px 28px 28px;
 }
 .topbar {
   display: flex;
@@ -277,18 +307,36 @@ dialog::backdrop { background: rgba(17, 24, 39, 0.52); }
 }
 
 @media (max-width: 860px) {
+  .language-switcher {
+    position: static;
+    justify-content: center;
+    padding: 12px 12px 0;
+    background: transparent;
+  }
+  .language-option span:last-child { display: none; }
   .booking-shell, .app-shell { grid-template-columns: 1fr; }
-  .booking-shell { align-items: start; gap: 24px; padding-top: 36px; }
+  .booking-shell { align-items: start; gap: 24px; padding-top: 24px; }
   .app-shell { display: block; }
   .sidebar {
     position: static;
     height: auto;
     gap: 16px;
+    padding-top: 24px;
   }
   .sidebar nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .workspace { padding: 18px; }
   .topbar, .section-actions { align-items: stretch; flex-direction: column; }
   .search-row, .stats-grid { grid-template-columns: 1fr; }
+}
+
+[dir="rtl"] body { text-align: right; }
+[dir="rtl"] .nav-item { text-align: right; }
+[dir="rtl"] .row-actions { justify-content: flex-start; }
+[dir="rtl"] .modal-actions { justify-content: flex-start; }
+[dir="rtl"] input,
+[dir="rtl"] textarea,
+[dir="rtl"] select {
+  direction: rtl;
 }
 
 @media (max-width: 620px) {

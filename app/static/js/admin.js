@@ -14,6 +14,15 @@ const statusFilter = document.querySelector("#status-filter");
 const appMessage = document.querySelector("#app-message");
 
 const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
+const t = window.TaxiI18n.t;
+const statusKeys = {
+  pending: "pending",
+  confirmed: "confirmed",
+  in_progress: "inProgress",
+  completed: "completed",
+  cancelled: "cancelled",
+  no_show: "noShow",
+};
 
 function serializeForm(form) {
   return Object.fromEntries(new FormData(form).entries());
@@ -25,8 +34,17 @@ async function api(path, options = {}) {
     ...options,
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "Request failed");
+  if (!response.ok) throw new Error(translateApiError(data.error) || t("requestFailed"));
   return data;
+}
+
+function translateApiError(message) {
+  const map = {
+    "Invalid username or password": "invalidLogin",
+    "Authentication required": "authRequired",
+    "Request failed": "requestFailed",
+  };
+  return map[message] ? t(map[message]) : message;
 }
 
 function showApp() {
@@ -40,7 +58,7 @@ function showLogin() {
 }
 
 function statusLabel(value) {
-  return value.replace("_", " ");
+  return t(statusKeys[value] || value);
 }
 
 function escapeHtml(value) {
@@ -57,7 +75,7 @@ function setSection(section) {
   state.section = section;
   document.querySelectorAll(".section").forEach((el) => el.classList.toggle("active", el.id === section));
   document.querySelectorAll(".nav-item").forEach((el) => el.classList.toggle("active", el.dataset.section === section));
-  document.querySelector("#section-title").textContent = section.charAt(0).toUpperCase() + section.slice(1);
+  document.querySelector("#section-title").textContent = t(section);
   statusFilter.style.display = section === "appointments" ? "block" : "none";
 }
 
@@ -108,7 +126,7 @@ function renderStats() {
         <strong>${euro.format(Number(row.revenue))}</strong>
       </div>
     `).join("")
-    : `<p class="message">No completed revenue recorded yet.</p>`;
+    : `<p class="message">${t("noCompletedRevenue")}</p>`;
 }
 
 function renderClients() {
@@ -120,16 +138,16 @@ function renderClients() {
         <div class="meta">
           <span>${escapeHtml(client.phone)}</span>
           ${client.email ? `<span>${escapeHtml(client.email)}</span>` : ""}
-          <span>${client.appointment_count || 0} appointments</span>
+          <span>${client.appointment_count || 0} ${t("appointmentCount")}</span>
           <span>${euro.format(Number(client.total_revenue || 0))}</span>
         </div>
       </div>
       <div class="row-actions">
-        <button class="small-button" data-edit-client="${client.id}">Edit</button>
-        <button class="small-button danger" data-delete-client="${client.id}">Delete</button>
+        <button class="small-button" data-edit-client="${client.id}">${t("edit")}</button>
+        <button class="small-button danger" data-delete-client="${client.id}">${t("delete")}</button>
       </div>
     </article>
-  `).join("") : `<p class="message">No clients found.</p>`;
+  `).join("") : `<p class="message">${t("noClients")}</p>`;
 }
 
 function renderAppointments() {
@@ -140,31 +158,31 @@ function renderAppointments() {
         <h4>${escapeHtml(item.client_name)} <span class="status ${item.status}">${statusLabel(item.status)}</span></h4>
         <div class="meta">
           <span>${escapeHtml(item.client_phone)}</span>
-          <span>${escapeHtml(item.appointment_date)} at ${String(item.appointment_time).slice(0, 5)}</span>
-          <span>${escapeHtml(item.pickup_address)} to ${escapeHtml(item.destination)}</span>
-          <span>${item.passenger_count} passengers</span>
+          <span>${escapeHtml(item.appointment_date)} ${t("at")} ${String(item.appointment_time).slice(0, 5)}</span>
+          <span>${escapeHtml(item.pickup_address)} ${t("to")} ${escapeHtml(item.destination)}</span>
+          <span>${item.passenger_count} ${t("passengers")}</span>
           ${item.fare_amount ? `<span>${euro.format(Number(item.fare_amount))}</span>` : ""}
         </div>
       </div>
       <div class="row-actions">
-        <button class="small-button" data-edit-appointment="${item.id}">Edit</button>
-        <button class="small-button danger" data-delete-appointment="${item.id}">Delete</button>
+        <button class="small-button" data-edit-appointment="${item.id}">${t("edit")}</button>
+        <button class="small-button danger" data-delete-appointment="${item.id}">${t("delete")}</button>
       </div>
     </article>
-  `).join("") : `<p class="message">No appointments found.</p>`;
+  `).join("") : `<p class="message">${t("noAppointments")}</p>`;
 }
 
 function openClientModal(client = {}) {
   modalForm.innerHTML = `
-    <h3>${client.id ? "Edit client" : "Add client"}</h3>
-    <label>Name<input name="name" value="${escapeHtml(client.name || "")}" required></label>
-    <label>Phone<input name="phone" value="${escapeHtml(client.phone || "")}" required></label>
-    <label>Email<input name="email" type="email" value="${escapeHtml(client.email || "")}"></label>
-    <label class="span-2">Notes<textarea name="notes" rows="3">${escapeHtml(client.notes || "")}</textarea></label>
+    <h3>${client.id ? t("editClient") : t("addClient")}</h3>
+    <label>${t("name")}<input name="name" value="${escapeHtml(client.name || "")}" required></label>
+    <label>${t("phone")}<input name="phone" value="${escapeHtml(client.phone || "")}" required></label>
+    <label>${t("email")}<input name="email" type="email" value="${escapeHtml(client.email || "")}"></label>
+    <label class="span-2">${t("notes")}<textarea name="notes" rows="3">${escapeHtml(client.notes || "")}</textarea></label>
     <div class="message span-2" aria-live="polite"></div>
     <div class="modal-actions">
-      <button type="button" class="ghost" data-close>Cancel</button>
-      <button type="submit" class="primary">Save client</button>
+      <button type="button" class="ghost" data-close>${t("cancel")}</button>
+      <button type="submit" class="primary">${t("saveClient")}</button>
     </div>
   `;
   modalForm.onsubmit = async (event) => {
@@ -187,25 +205,25 @@ function openClientModal(client = {}) {
 
 function openAppointmentModal(item = {}) {
   modalForm.innerHTML = `
-    <h3>${item.id ? "Edit appointment" : "Add appointment"}</h3>
-    <label>Client name<input name="client_name" value="${escapeHtml(item.client_name || "")}" required></label>
-    <label>Client phone<input name="client_phone" value="${escapeHtml(item.client_phone || "")}" required></label>
-    <label class="span-2">Pickup address<input name="pickup_address" value="${escapeHtml(item.pickup_address || "")}" required></label>
-    <label class="span-2">Destination<input name="destination" value="${escapeHtml(item.destination || "")}" required></label>
-    <label>Date<input name="date" type="date" value="${escapeHtml(item.appointment_date || "")}" required></label>
-    <label>Time<input name="time" type="time" value="${String(item.appointment_time || "").slice(0, 5)}" required></label>
-    <label>Passengers<input name="passenger_count" type="number" min="1" max="99" value="${escapeHtml(item.passenger_count || 1)}" required></label>
-    <label>Status<select name="status">
+    <h3>${item.id ? t("editAppointment") : t("addAppointment")}</h3>
+    <label>${t("clientName")}<input name="client_name" value="${escapeHtml(item.client_name || "")}" required></label>
+    <label>${t("clientPhone")}<input name="client_phone" value="${escapeHtml(item.client_phone || "")}" required></label>
+    <label class="span-2">${t("pickupAddress")}<input name="pickup_address" value="${escapeHtml(item.pickup_address || "")}" required></label>
+    <label class="span-2">${t("destination")}<input name="destination" value="${escapeHtml(item.destination || "")}" required></label>
+    <label>${t("date")}<input name="date" type="date" value="${escapeHtml(item.appointment_date || "")}" required></label>
+    <label>${t("time")}<input name="time" type="time" value="${String(item.appointment_time || "").slice(0, 5)}" required></label>
+    <label>${t("passengers")}<input name="passenger_count" type="number" min="1" max="99" value="${escapeHtml(item.passenger_count || 1)}" required></label>
+    <label>${t("status")}<select name="status">
       ${["pending", "confirmed", "in_progress", "completed", "cancelled", "no_show"].map((status) => `
         <option value="${status}" ${status === (item.status || "pending") ? "selected" : ""}>${statusLabel(status)}</option>
       `).join("")}
     </select></label>
-    <label>Fare amount<input name="fare_amount" type="number" min="0" step="0.01" value="${escapeHtml(item.fare_amount || "")}"></label>
-    <label class="span-2">Notes<textarea name="notes" rows="3">${escapeHtml(item.notes || "")}</textarea></label>
+    <label>${t("fareAmount")}<input name="fare_amount" type="number" min="0" step="0.01" value="${escapeHtml(item.fare_amount || "")}"></label>
+    <label class="span-2">${t("notes")}<textarea name="notes" rows="3">${escapeHtml(item.notes || "")}</textarea></label>
     <div class="message span-2" aria-live="polite"></div>
     <div class="modal-actions">
-      <button type="button" class="ghost" data-close>Cancel</button>
-      <button type="submit" class="primary">Save appointment</button>
+      <button type="button" class="ghost" data-close>${t("cancel")}</button>
+      <button type="submit" class="primary">${t("saveAppointment")}</button>
     </div>
   `;
   modalForm.onsubmit = async (event) => {
@@ -230,7 +248,7 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
   const message = document.querySelector("#login-message");
   const button = event.target.querySelector("button");
   button.disabled = true;
-  button.textContent = "Signing in...";
+  button.textContent = t("signingIn");
   message.textContent = "";
   try {
     await api("/api/auth/login", { method: "POST", body: JSON.stringify(serializeForm(event.target)) });
@@ -242,7 +260,7 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
     message.classList.add("error");
   } finally {
     button.disabled = false;
-    button.textContent = "Sign in";
+    button.textContent = t("signIn");
   }
 });
 
@@ -266,7 +284,7 @@ document.body.addEventListener("click", async (event) => {
   if (editClient) openClientModal(state.clients.find((client) => String(client.id) === editClient.dataset.editClient));
 
   const deleteClient = event.target.closest("[data-delete-client]");
-  if (deleteClient && confirm("Delete this client and their appointments?")) {
+  if (deleteClient && confirm(t("deleteClientConfirm"))) {
     await api(`/api/clients/${deleteClient.dataset.deleteClient}`, { method: "DELETE" });
     await loadAll();
   }
@@ -277,7 +295,7 @@ document.body.addEventListener("click", async (event) => {
   }
 
   const deleteAppointment = event.target.closest("[data-delete-appointment]");
-  if (deleteAppointment && confirm("Delete this appointment?")) {
+  if (deleteAppointment && confirm(t("deleteAppointmentConfirm"))) {
     await api(`/api/appointments/${deleteAppointment.dataset.deleteAppointment}`, { method: "DELETE" });
     await loadAll();
   }
@@ -297,3 +315,10 @@ api("/api/auth/me")
     await loadAll();
   })
   .catch(() => showLogin());
+
+document.addEventListener("languagechange", () => {
+  setSection(state.section);
+  render();
+  const loginButton = document.querySelector("#login-form button[type='submit']");
+  loginButton.textContent = loginButton.disabled ? t("signingIn") : t("signIn");
+});
