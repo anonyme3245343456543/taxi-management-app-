@@ -11,7 +11,7 @@ const destinationInput = form.elements.destination;
 
 const pricing = {
   baseFee: 10,
-  perKilometer: 2,
+  perKilometer: 1.8,
   perMinute: 0.6,
 };
 const localeByLanguage = {
