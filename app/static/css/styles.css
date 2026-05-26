@@ -17,12 +17,17 @@
 }
 
 * { box-sizing: border-box; }
+html {
+  scroll-behavior: smooth;
+  background: #05070c;
+}
 body {
   margin: 0;
   min-height: 100vh;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: var(--bg);
   color: var(--text);
+  -webkit-overflow-scrolling: touch;
 }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
@@ -76,13 +81,29 @@ h1, h2, h3, p { margin-top: 0; }
 }
 
 .public-page {
+  position: relative;
+  isolation: isolate;
+  overflow-x: hidden;
+  min-height: 100vh;
+  background: #05070c;
+}
+.public-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background:
     radial-gradient(circle at 18% 32%, rgba(200, 165, 90, 0.28), transparent 28%),
     linear-gradient(105deg, rgba(3, 5, 9, 0.94) 0%, rgba(5, 7, 12, 0.82) 43%, rgba(5, 7, 12, 0.54) 100%),
-    url("https://images.unsplash.com/photo-1676833647260-47c423b39334?auto=format&fit=crop&fm=jpg&q=82&w=2600") center/cover fixed;
-  background-color: #05070c;
+    url("https://images.unsplash.com/photo-1676833647260-47c423b39334?auto=format&fit=crop&fm=jpg&q=82&w=2600") center/cover no-repeat;
+  backface-visibility: hidden;
+  contain: paint;
+  transform: translate3d(0, 0, 0);
 }
 .booking-shell {
+  position: relative;
+  z-index: 1;
   width: min(1180px, calc(100% - 32px));
   min-height: 100vh;
   margin: 0 auto;
@@ -587,6 +608,21 @@ dialog::backdrop { background: rgba(17, 24, 39, 0.52); }
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+@supports (height: 100lvh) {
+  .public-page::before { min-height: 100lvh; }
+}
+
+@supports (-webkit-touch-callout: none) {
+  .public-page::before {
+    min-height: 100lvh;
+    transform: translateZ(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
 }
 
 @media (max-width: 860px) {
