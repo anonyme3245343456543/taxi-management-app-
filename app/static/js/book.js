@@ -36,7 +36,7 @@ const ileDeFranceBounds = {
   maxLon: 3.58,
 };
 const ileDeFranceDepartments = new Set(["75", "77", "78", "91", "92", "93", "94", "95"]);
-const ileDeFranceTerms = [
+const ileDeFranceLocationTerms = [
   "paris",
   "ile de france",
   "hauts de seine",
@@ -47,8 +47,11 @@ const ileDeFranceTerms = [
   "seine et marne",
   "val doise",
 ];
+const frenchCountryNames = new Set(["france", "frankreich", "francia", "frankrijk", "法国", "法國", "فرنسا"]);
 const photonAutocompleteLimit = 12;
+const photonCacheLimit = 40;
 const visibleSuggestionLimit = 5;
+const photonCache = new Map();
 let estimateTimer;
 let estimateAbortController;
 let latestEstimate;
@@ -110,7 +113,13 @@ function updateRideTiming(refreshImmediateTime = false) {
 
 function payloadFromForm(formElement) {
   if (selectedBookingType() === "immediate") setCurrentRideDateTime();
-  return Object.fromEntries(new FormData(formElement).entries());
+  const payload = Object.fromEntries(new FormData(formElement).entries());
+  if (latestEstimate && estimateCard.dataset.state === "ready") {
+    payload.estimated_distance_km = latestEstimate.distanceKm.toFixed(1);
+    payload.estimated_duration_minutes = String(Math.round(latestEstimate.durationMinutes));
+    payload.estimated_price_eur = String(Math.round(latestEstimate.price));
+  }
+  return payload;
 }
 
 form.addEventListener("submit", async (event) => {
@@ -137,6 +146,8 @@ form.addEventListener("submit", async (event) => {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || t("bookingError"));
     form.reset();
+    clearSelectedAddress(pickupInput);
+    clearSelectedAddress(destinationInput);
     form.passenger_count.value = "1";
     form.elements.booking_type.value = "scheduled";
     updateRideTiming();
@@ -156,7 +167,8 @@ document.addEventListener("languagechange", () => {
   const button = form.querySelector("button[type='submit']");
   button.textContent = button.disabled ? t("submitting") : t("submitBooking");
   if (latestEstimate) renderEstimate(latestEstimate);
-  if (estimateCard.classList.contains("loading")) estimateStatus.textContent = t("estimateLoading");
+  if (estimateCard.dataset.state === "loading") estimateStatus.textContent = t("estimateLoading");
+  if (estimateCard.dataset.state === "select-address") estimateStatus.textContent = t("estimateSelectAddress");
   hideAllAddressSuggestions();
 });
 
@@ -190,27 +202,60 @@ function hideEstimate() {
   latestEstimate = null;
   estimateCard.classList.add("hidden");
   estimateCard.classList.remove("loading");
+  delete estimateCard.dataset.state;
 }
 
 function showEstimateLoading() {
   estimateCard.classList.remove("hidden");
   estimateCard.classList.add("loading");
+  estimateCard.dataset.state = "loading";
   estimateDistance.textContent = "-";
   estimateDuration.textContent = "-";
   estimatePrice.textContent = "-";
   estimateStatus.textContent = t("estimateLoading");
 }
 
+function showEstimateSelectAddress() {
+  latestEstimate = null;
+  estimateCard.classList.remove("hidden", "loading");
+  estimateCard.dataset.state = "select-address";
+  estimateDistance.textContent = "-";
+  estimateDuration.textContent = "-";
+  estimatePrice.textContent = "-";
+  estimateStatus.textContent = t("estimateSelectAddress");
+}
+
 function renderEstimate(estimate) {
   latestEstimate = estimate;
   estimateCard.classList.remove("hidden", "loading");
+  estimateCard.dataset.state = "ready";
   estimateDistance.textContent = formatDistance(estimate.distanceKm);
   estimateDuration.textContent = formatMinutes(estimate.durationMinutes);
   estimatePrice.textContent = formatPrice(estimate.price);
   estimateStatus.textContent = "";
 }
 
+function photonCacheKey(query, limit) {
+  return [
+    window.TaxiI18n.currentLanguage(),
+    String(limit),
+    normalizeAddressText(query),
+  ].join(":");
+}
+
+function rememberPhotonFeatures(key, features) {
+  photonCache.set(key, features);
+  if (photonCache.size > photonCacheLimit) {
+    photonCache.delete(photonCache.keys().next().value);
+  }
+}
+
 async function fetchPhotonFeatures(query, signal, limit = 1) {
+  if (signal?.aborted) throw new DOMException("Request aborted", "AbortError");
+  const cacheKey = photonCacheKey(query, limit);
+  const cachedFeatures = photonCache.get(cacheKey);
+  if (cachedFeatures) return cachedFeatures;
+
   const params = new URLSearchParams({
     q: query,
     limit: String(limit),
@@ -221,14 +266,9 @@ async function fetchPhotonFeatures(query, signal, limit = 1) {
   const response = await fetch(`https://photon.komoot.io/api/?${params.toString()}`, { signal });
   if (!response.ok) throw new Error("Geocoding failed");
   const data = await response.json();
-  return rankPhotonFeatures(Array.isArray(data.features) ? data.features : []);
-}
-
-async function geocodeAddress(address, signal) {
-  const feature = (await fetchPhotonFeatures(address, signal, photonAutocompleteLimit))[0];
-  const coordinates = feature?.geometry?.coordinates;
-  if (!Array.isArray(coordinates) || coordinates.length < 2) throw new Error("Address not found");
-  return { lon: coordinates[0], lat: coordinates[1] };
+  const features = rankPhotonFeatures(Array.isArray(data.features) ? data.features : []);
+  rememberPhotonFeatures(cacheKey, features);
+  return features;
 }
 
 function normalizeAddressText(value) {
@@ -245,33 +285,63 @@ function normalizeAddressText(value) {
 function featureCoordinates(feature) {
   const coordinates = feature?.geometry?.coordinates;
   if (!Array.isArray(coordinates) || coordinates.length < 2) return null;
-  return { lon: Number(coordinates[0]), lat: Number(coordinates[1]) };
+  const lon = Number(coordinates[0]);
+  const lat = Number(coordinates[1]);
+  if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+  return { lon, lat };
+}
+
+function featurePostcode(feature) {
+  const postcode = String(feature?.properties?.postcode || "").trim();
+  return postcode;
 }
 
 function featureDepartmentCode(feature) {
-  const postcode = String(feature?.properties?.postcode || "").trim();
-  return postcode.length >= 2 ? postcode.slice(0, 2) : "";
+  const postcode = featurePostcode(feature);
+  const match = postcode.match(/^(\d{2})/);
+  return match ? match[1] : "";
 }
 
-function featureSearchText(feature) {
+function featureCountryText(feature) {
+  return normalizeAddressText(feature?.properties?.country);
+}
+
+function featureCountryIsFrance(feature) {
+  const country = featureCountryText(feature);
+  return frenchCountryNames.has(country);
+}
+
+function featureCountryIsKnownOutsideFrance(feature) {
+  const country = featureCountryText(feature);
+  return Boolean(country) && !frenchCountryNames.has(country);
+}
+
+function featureStructuredLocationText(feature) {
   const properties = feature?.properties || {};
   return normalizeAddressText([
-    properties.name,
-    properties.street,
     properties.city,
     properties.county,
     properties.state,
     properties.country,
-    properties.postcode,
   ].filter(Boolean).join(" "));
 }
 
 function featureIsInIleDeFrance(feature) {
+  const postcode = featurePostcode(feature);
   const departmentCode = featureDepartmentCode(feature);
-  if (ileDeFranceDepartments.has(departmentCode)) return true;
+  if (postcode) {
+    if (featureCountryIsKnownOutsideFrance(feature)) return false;
+    return ileDeFranceDepartments.has(departmentCode);
+  }
+  if (featureCountryIsKnownOutsideFrance(feature)) return false;
 
-  const text = featureSearchText(feature);
-  if (ileDeFranceTerms.some((term) => text.includes(term))) return true;
+  const text = featureStructuredLocationText(feature);
+  if (
+    featureCountryIsFrance(feature) &&
+    ileDeFranceLocationTerms.some((term) => text.includes(term))
+  ) {
+    return true;
+  }
 
   const coordinates = featureCoordinates(feature);
   if (!coordinates) return false;
@@ -300,8 +370,7 @@ function distanceFromParis(feature) {
 
 function featureRank(feature, originalIndex) {
   const isLocal = featureIsInIleDeFrance(feature);
-  const country = normalizeAddressText(feature?.properties?.country);
-  const countryPenalty = country && country !== "france" ? 10000 : 0;
+  const countryPenalty = featureCountryIsKnownOutsideFrance(feature) ? 10000 : 0;
   const localPriority = isLocal ? -10000 : 0;
   return countryPenalty + localPriority + distanceFromParis(feature) + (originalIndex * 0.01);
 }
@@ -315,6 +384,7 @@ function rankPhotonFeatures(features) {
 
 function addressSuggestionFromFeature(feature) {
   const properties = feature.properties || {};
+  const coordinates = featureCoordinates(feature);
   const street = [properties.housenumber, properties.street].filter(Boolean).join(" ");
   const place = properties.name || street || properties.city || properties.county || properties.state || properties.country;
   const cityLine = [properties.postcode, properties.city || properties.county || properties.state].filter(Boolean).join(" ");
@@ -328,13 +398,22 @@ function addressSuggestionFromFeature(feature) {
     main: place || label,
     secondary,
     isLocal: featureIsInIleDeFrance(feature),
+    coordinates,
   };
+}
+
+function roundedCoordinate(value) {
+  return Number.isFinite(value) ? String(Math.round(value * 10000) / 10000) : "";
 }
 
 function uniqueAddressSuggestions(suggestions) {
   const seen = new Set();
   return suggestions.filter((suggestion) => {
-    const key = normalizeAddressText(suggestion.label);
+    const key = [
+      normalizeAddressText(suggestion.label),
+      roundedCoordinate(suggestion.coordinates?.lat),
+      roundedCoordinate(suggestion.coordinates?.lon),
+    ].join(":");
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -354,8 +433,35 @@ function hideAllAddressSuggestions() {
   addressAutocompleteFields.forEach(hideAddressSuggestions);
 }
 
+function clearSelectedAddress(input) {
+  delete input.dataset.selectedAddressLabel;
+  delete input.dataset.selectedLat;
+  delete input.dataset.selectedLon;
+}
+
+function clearSelectedAddressIfEdited(input) {
+  const selectedLabel = input.dataset.selectedAddressLabel;
+  if (selectedLabel && normalizeAddressText(input.value) !== selectedLabel) clearSelectedAddress(input);
+}
+
+function selectedAddressCoordinates(input) {
+  const selectedLabel = input.dataset.selectedAddressLabel;
+  if (!selectedLabel || normalizeAddressText(input.value) !== selectedLabel) return null;
+
+  const lat = Number(input.dataset.selectedLat);
+  const lon = Number(input.dataset.selectedLon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  return { lat, lon };
+}
+
 function selectAddressSuggestion(field, suggestion) {
   field.input.value = suggestion.label;
+  clearSelectedAddress(field.input);
+  if (suggestion.coordinates) {
+    field.input.dataset.selectedAddressLabel = normalizeAddressText(suggestion.label);
+    field.input.dataset.selectedLat = String(suggestion.coordinates.lat);
+    field.input.dataset.selectedLon = String(suggestion.coordinates.lon);
+  }
   field.input.focus();
   hideAddressSuggestions(field);
   scheduleEstimate(0);
@@ -465,15 +571,18 @@ function scheduleEstimate(delay = 650) {
     return;
   }
 
+  const origin = selectedAddressCoordinates(pickupInput);
+  const target = selectedAddressCoordinates(destinationInput);
+  if (!origin || !target) {
+    showEstimateSelectAddress();
+    return;
+  }
+
   estimateTimer = setTimeout(async () => {
     const controller = new AbortController();
     estimateAbortController = controller;
     showEstimateLoading();
     try {
-      const [origin, target] = await Promise.all([
-        geocodeAddress(pickup, controller.signal),
-        geocodeAddress(destination, controller.signal),
-      ]);
       const estimate = await routeBetween(origin, target, controller.signal);
       if (estimateAbortController === controller) renderEstimate(estimate);
     } catch (error) {
@@ -486,10 +595,14 @@ addressAutocompleteFields.forEach((field) => {
   field.menu.id = field.menu.id || `${field.input.id}-suggestions`;
   field.input.setAttribute("aria-controls", field.menu.id);
   field.input.addEventListener("input", () => {
+    clearSelectedAddressIfEdited(field.input);
     scheduleEstimate();
     scheduleAddressSuggestions(field);
   });
-  field.input.addEventListener("change", () => scheduleEstimate());
+  field.input.addEventListener("change", () => {
+    clearSelectedAddressIfEdited(field.input);
+    scheduleEstimate();
+  });
   field.input.addEventListener("focus", () => scheduleAddressSuggestions(field));
   field.input.addEventListener("keydown", (event) => {
     if (event.key === "Escape") hideAddressSuggestions(field);

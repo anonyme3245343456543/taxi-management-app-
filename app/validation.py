@@ -1,5 +1,6 @@
 import re
 from datetime import datetime, timedelta
+from math import isfinite
 
 
 STATUSES = {"pending", "confirmed", "in_progress", "completed", "cancelled", "no_show"}
@@ -118,3 +119,32 @@ def parse_money(payload):
     if parsed < 0:
         raise ValueError("Fare amount cannot be negative")
     return round(parsed, 2)
+
+
+def parse_optional_number(payload, field, label, max_value):
+    value = payload.get(field)
+    if value in (None, ""):
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be numeric") from exc
+    if not isfinite(parsed) or parsed < 0 or parsed > max_value:
+        raise ValueError(f"{label} is invalid")
+    return parsed
+
+
+def parse_public_fare_estimate(payload):
+    distance = parse_optional_number(payload, "estimated_distance_km", "Estimated distance", 2000)
+    duration = parse_optional_number(payload, "estimated_duration_minutes", "Estimated duration", 2880)
+    price = parse_optional_number(payload, "estimated_price_eur", "Estimated price", 10000)
+    values = (distance, duration, price)
+    if all(value is None for value in values):
+        return None
+    if any(value is None for value in values):
+        raise ValueError("Fare estimate is incomplete")
+    return {
+        "estimated_distance_km": round(distance, 1),
+        "estimated_duration_minutes": int(round(duration)),
+        "estimated_price_eur": int(round(price)),
+    }

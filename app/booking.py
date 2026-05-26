@@ -19,6 +19,7 @@ from .validation import (
     parse_date,
     parse_passenger_count,
     parse_phone,
+    parse_public_fare_estimate,
     parse_time,
     reject_fake_public_text,
     required_text,
@@ -89,6 +90,7 @@ def create_public_booking():
             validate_appointment_datetime(appointment_date, appointment_time)
         passenger_count = parse_passenger_count(payload, max_passengers=8)
         notes = optional_text(payload, "notes", max_length=500)
+        fare_estimate = parse_public_fare_estimate(payload)
         clean_payload = {
             "phone": phone,
             "pickup_address": pickup_address,
@@ -125,19 +127,20 @@ def create_public_booking():
             notes,
         ),
     )
-    notify_booking_created(
-        {
-            "name": name,
-            "phone": phone,
-            "pickup_address": pickup_address,
-            "destination": destination,
-            "date": appointment_date.isoformat(),
-            "time": appointment_time.strftime("%H:%M"),
-            "booking_type": booking_type,
-            "passenger_count": passenger_count,
-            "notes": notes,
-        }
-    )
+    notification_payload = {
+        "name": name,
+        "phone": phone,
+        "pickup_address": pickup_address,
+        "destination": destination,
+        "date": appointment_date.isoformat(),
+        "time": appointment_time.strftime("%H:%M"),
+        "booking_type": booking_type,
+        "passenger_count": passenger_count,
+        "notes": notes,
+    }
+    if fare_estimate:
+        notification_payload.update(fare_estimate)
+    notify_booking_created(notification_payload)
     mark_booking_success(ip_address)
 
     return jsonify(

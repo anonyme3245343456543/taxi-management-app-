@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import re
 import urllib.request
@@ -17,6 +18,36 @@ def safe_telegram_value(value, limit=500):
     return value[:limit] or "-"
 
 
+def safe_estimate_number(value):
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(parsed) or parsed < 0:
+        return None
+    return parsed
+
+
+def format_decimal(value, digits=0):
+    text = f"{value:.{digits}f}" if digits else str(int(round(value)))
+    if digits:
+        text = text.rstrip("0").rstrip(".")
+    return text.replace(".", ",")
+
+
+def format_estimate_lines(booking):
+    distance = safe_estimate_number(booking.get("estimated_distance_km"))
+    duration = safe_estimate_number(booking.get("estimated_duration_minutes"))
+    price = safe_estimate_number(booking.get("estimated_price_eur"))
+    if distance is None or duration is None or price is None:
+        return ["Estimation: non disponible"]
+    return [
+        f"Distance estimée: {format_decimal(distance, 1)} km",
+        f"Durée estimée: {format_decimal(duration)} min",
+        f"Prix estimé: {format_decimal(price)} €",
+    ]
+
+
 def format_booking_notification(booking):
     notes = safe_telegram_value(booking.get("notes") or "-")
     booking_type = booking.get("booking_type") or "scheduled"
@@ -33,6 +64,7 @@ def format_booking_notification(booking):
             f"Date: {safe_telegram_value(booking['date'], 20)}",
             f"Time: {safe_telegram_value(booking['time'], 20)}",
             f"Passengers: {safe_telegram_value(booking['passenger_count'], 10)}",
+            *format_estimate_lines(booking),
             f"Notes: {notes}",
         ]
     )
