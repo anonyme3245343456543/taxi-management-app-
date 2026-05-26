@@ -25,6 +25,30 @@ const localeByLanguage = {
   zh: "zh-CN",
   ar: "ar-SA",
 };
+const parisBias = {
+  lat: 48.8566,
+  lon: 2.3522,
+};
+const ileDeFranceBounds = {
+  minLat: 48.12,
+  maxLat: 49.25,
+  minLon: 1.44,
+  maxLon: 3.58,
+};
+const ileDeFranceDepartments = new Set(["75", "77", "78", "91", "92", "93", "94", "95"]);
+const ileDeFranceTerms = [
+  "paris",
+  "ile de france",
+  "hauts de seine",
+  "seine saint denis",
+  "val de marne",
+  "yvelines",
+  "essonne",
+  "seine et marne",
+  "val doise",
+];
+const photonAutocompleteLimit = 12;
+const visibleSuggestionLimit = 5;
 let estimateTimer;
 let estimateAbortController;
 let latestEstimate;
@@ -190,21 +214,103 @@ async function fetchPhotonFeatures(query, signal, limit = 1) {
   const params = new URLSearchParams({
     q: query,
     limit: String(limit),
-    lat: "48.8566",
-    lon: "2.3522",
+    lat: String(parisBias.lat),
+    lon: String(parisBias.lon),
     lang: window.TaxiI18n.currentLanguage(),
   });
   const response = await fetch(`https://photon.komoot.io/api/?${params.toString()}`, { signal });
   if (!response.ok) throw new Error("Geocoding failed");
   const data = await response.json();
-  return Array.isArray(data.features) ? data.features : [];
+  return rankPhotonFeatures(Array.isArray(data.features) ? data.features : []);
 }
 
 async function geocodeAddress(address, signal) {
-  const feature = (await fetchPhotonFeatures(address, signal, 1))[0];
+  const feature = (await fetchPhotonFeatures(address, signal, photonAutocompleteLimit))[0];
   const coordinates = feature?.geometry?.coordinates;
   if (!Array.isArray(coordinates) || coordinates.length < 2) throw new Error("Address not found");
   return { lon: coordinates[0], lat: coordinates[1] };
+}
+
+function normalizeAddressText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[’']/g, "")
+    .replace(/[-–—_.,;:/()]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function featureCoordinates(feature) {
+  const coordinates = feature?.geometry?.coordinates;
+  if (!Array.isArray(coordinates) || coordinates.length < 2) return null;
+  return { lon: Number(coordinates[0]), lat: Number(coordinates[1]) };
+}
+
+function featureDepartmentCode(feature) {
+  const postcode = String(feature?.properties?.postcode || "").trim();
+  return postcode.length >= 2 ? postcode.slice(0, 2) : "";
+}
+
+function featureSearchText(feature) {
+  const properties = feature?.properties || {};
+  return normalizeAddressText([
+    properties.name,
+    properties.street,
+    properties.city,
+    properties.county,
+    properties.state,
+    properties.country,
+    properties.postcode,
+  ].filter(Boolean).join(" "));
+}
+
+function featureIsInIleDeFrance(feature) {
+  const departmentCode = featureDepartmentCode(feature);
+  if (ileDeFranceDepartments.has(departmentCode)) return true;
+
+  const text = featureSearchText(feature);
+  if (ileDeFranceTerms.some((term) => text.includes(term))) return true;
+
+  const coordinates = featureCoordinates(feature);
+  if (!coordinates) return false;
+  return (
+    coordinates.lat >= ileDeFranceBounds.minLat &&
+    coordinates.lat <= ileDeFranceBounds.maxLat &&
+    coordinates.lon >= ileDeFranceBounds.minLon &&
+    coordinates.lon <= ileDeFranceBounds.maxLon
+  );
+}
+
+function distanceFromParis(feature) {
+  const coordinates = featureCoordinates(feature);
+  if (!coordinates) return Number.POSITIVE_INFINITY;
+
+  const earthRadiusKm = 6371;
+  const degreesToRadians = (degrees) => degrees * Math.PI / 180;
+  const latDistance = degreesToRadians(coordinates.lat - parisBias.lat);
+  const lonDistance = degreesToRadians(coordinates.lon - parisBias.lon);
+  const startLat = degreesToRadians(parisBias.lat);
+  const endLat = degreesToRadians(coordinates.lat);
+  const a = Math.sin(latDistance / 2) ** 2 +
+    Math.cos(startLat) * Math.cos(endLat) * Math.sin(lonDistance / 2) ** 2;
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function featureRank(feature, originalIndex) {
+  const isLocal = featureIsInIleDeFrance(feature);
+  const country = normalizeAddressText(feature?.properties?.country);
+  const countryPenalty = country && country !== "france" ? 10000 : 0;
+  const localPriority = isLocal ? -10000 : 0;
+  return countryPenalty + localPriority + distanceFromParis(feature) + (originalIndex * 0.01);
+}
+
+function rankPhotonFeatures(features) {
+  return features
+    .map((feature, index) => ({ feature, rank: featureRank(feature, index) }))
+    .sort((a, b) => a.rank - b.rank)
+    .map((item) => item.feature);
 }
 
 function addressSuggestionFromFeature(feature) {
@@ -221,7 +327,18 @@ function addressSuggestionFromFeature(feature) {
     label,
     main: place || label,
     secondary,
+    isLocal: featureIsInIleDeFrance(feature),
   };
+}
+
+function uniqueAddressSuggestions(suggestions) {
+  const seen = new Set();
+  return suggestions.filter((suggestion) => {
+    const key = normalizeAddressText(suggestion.label);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function hideAddressSuggestions(field) {
@@ -244,17 +361,31 @@ function selectAddressSuggestion(field, suggestion) {
   scheduleEstimate(0);
 }
 
+function addressSuggestionNote() {
+  const fallback = document.createElement("div");
+  fallback.className = "address-suggestion-note";
+  fallback.textContent = t("addressNoLocalResults");
+  return fallback;
+}
+
 function renderAddressSuggestions(field, suggestions) {
   if (!suggestions.length) {
-    hideAddressSuggestions(field);
+    field.menu.replaceChildren(addressSuggestionNote());
+    field.menu.classList.remove("hidden");
+    field.input.setAttribute("aria-expanded", "true");
     return;
   }
 
   const fragment = document.createDocumentFragment();
+  if (!suggestions.some((suggestion) => suggestion.isLocal)) {
+    fragment.append(addressSuggestionNote());
+  }
+
   suggestions.forEach((suggestion, index) => {
     const option = document.createElement("button");
     option.type = "button";
     option.className = "address-option";
+    if (!suggestion.isLocal) option.classList.add("outside-idf");
     option.id = `${field.menu.id}-option-${index}`;
     option.setAttribute("role", "option");
 
@@ -292,9 +423,11 @@ function scheduleAddressSuggestions(field) {
     const controller = new AbortController();
     field.controller = controller;
     try {
-      const features = await fetchPhotonFeatures(query, controller.signal, 5);
+      const features = await fetchPhotonFeatures(query, controller.signal, photonAutocompleteLimit);
       if (field.controller !== controller) return;
-      const suggestions = features.map(addressSuggestionFromFeature).filter(Boolean);
+      const suggestions = uniqueAddressSuggestions(
+        features.map(addressSuggestionFromFeature).filter(Boolean)
+      ).slice(0, visibleSuggestionLimit);
       renderAddressSuggestions(field, suggestions);
     } catch (error) {
       if (error.name !== "AbortError" && field.controller === controller) hideAddressSuggestions(field);

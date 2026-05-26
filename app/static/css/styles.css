@@ -419,9 +419,26 @@ input:focus, textarea:focus, select:focus {
   background: #fbf4e4;
   outline: none;
 }
+.address-suggestion-note {
+  margin: 2px 2px 6px;
+  border: 1px solid rgba(200, 165, 90, 0.24);
+  border-radius: 6px;
+  background: #fbf4e4;
+  color: #3d3219;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+.address-option.outside-idf {
+  color: #4b5563;
+}
 .address-option strong {
   color: #151922;
   font-size: 14px;
+}
+.address-option.outside-idf strong {
+  color: #3f4652;
 }
 .address-option span {
   color: var(--muted);
