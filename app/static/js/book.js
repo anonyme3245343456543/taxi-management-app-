@@ -28,6 +28,7 @@ const localeByLanguage = {
 let estimateTimer;
 let estimateAbortController;
 let latestEstimate;
+let submissionInFlight = false;
 const addressAutocompleteFields = [
   {
     input: pickupInput,
@@ -90,6 +91,7 @@ function payloadFromForm(formElement) {
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (submissionInFlight) return;
   updateRideTiming(true);
   if (!form.checkValidity()) {
     form.reportValidity();
@@ -97,6 +99,7 @@ form.addEventListener("submit", async (event) => {
   }
 
   const button = form.querySelector("button[type='submit']");
+  submissionInFlight = true;
   button.disabled = true;
   button.textContent = t("submitting");
   setMessage("");
@@ -119,6 +122,7 @@ form.addEventListener("submit", async (event) => {
   } catch (error) {
     setMessage(error.message, "error");
   } finally {
+    submissionInFlight = false;
     button.disabled = false;
     button.textContent = t("submitBooking");
   }

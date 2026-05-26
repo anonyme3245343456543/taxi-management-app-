@@ -31,16 +31,17 @@
           <h2 data-i18n="formTitle">Planifier votre trajet</h2>
         </div>
         <form id="booking-form" class="form-grid" novalidate>
-          <label><span data-i18n="name">Nom</span><input name="name" autocomplete="name" required></label>
-          <label><span data-i18n="phone">Téléphone</span><input name="phone" autocomplete="tel" required></label>
+          <input class="booking-trap" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <label><span data-i18n="name">Nom</span><input name="name" autocomplete="name" maxlength="80" required></label>
+          <label><span data-i18n="phone">Téléphone</span><input name="phone" autocomplete="tel" maxlength="32" required></label>
           <div class="span-2 address-field">
             <label for="pickup-address"><span data-i18n="pickupAddress">Adresse de départ</span></label>
-            <input id="pickup-address" name="pickup_address" autocomplete="off" data-address-input="pickup" aria-autocomplete="list" aria-expanded="false" required>
+            <input id="pickup-address" name="pickup_address" autocomplete="off" data-address-input="pickup" aria-autocomplete="list" aria-expanded="false" maxlength="220" required>
             <div class="address-suggestions hidden" data-address-suggestions="pickup" role="listbox"></div>
           </div>
           <div class="span-2 address-field">
             <label for="destination-address"><span data-i18n="destination">Destination</span></label>
-            <input id="destination-address" name="destination" autocomplete="off" data-address-input="destination" aria-autocomplete="list" aria-expanded="false" required>
+            <input id="destination-address" name="destination" autocomplete="off" data-address-input="destination" aria-autocomplete="list" aria-expanded="false" maxlength="220" required>
             <div class="address-suggestions hidden" data-address-suggestions="destination" role="listbox"></div>
           </div>
           <div id="fare-estimate" class="fare-estimate hidden span-2" aria-live="polite">
@@ -83,8 +84,8 @@
           </div>
           <label class="schedule-field"><span data-i18n="date">Date</span><input name="date" type="date" required></label>
           <label class="schedule-field"><span data-i18n="time">Heure</span><input name="time" type="time" required></label>
-          <label><span data-i18n="passengers">Passagers</span><input name="passenger_count" type="number" min="1" max="99" value="1" required></label>
-          <label class="span-2"><span data-i18n="notes">Notes</span><textarea name="notes" rows="4"></textarea></label>
+          <label><span data-i18n="passengers">Passagers</span><input name="passenger_count" type="number" min="1" max="8" value="1" required></label>
+          <label class="span-2"><span data-i18n="notes">Notes</span><textarea name="notes" rows="4" maxlength="500"></textarea></label>
           <div id="booking-message" class="message span-2" aria-live="polite"></div>
           <button class="primary span-2" type="submit" data-i18n="submitBooking">Envoyer la réservation</button>
         </form>

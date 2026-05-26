@@ -116,6 +116,22 @@ def ensure_schema():
         "create index if not exists appointments_date_time_idx on appointments(appointment_date, appointment_time)",
         "create index if not exists appointments_status_idx on appointments(status)",
         """
+        create table if not exists booking_rate_limits (
+            rate_key text primary key,
+            window_started_at timestamptz not null default now(),
+            request_count integer not null default 0,
+            last_booking_at timestamptz,
+            updated_at timestamptz not null default now()
+        )
+        """,
+        """
+        create table if not exists booking_submission_fingerprints (
+            fingerprint text primary key,
+            created_at timestamptz not null default now()
+        )
+        """,
+        "create index if not exists booking_submission_fingerprints_created_idx on booking_submission_fingerprints(created_at)",
+        """
         create or replace function set_updated_at()
         returns trigger as $$
         begin

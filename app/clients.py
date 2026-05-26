@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 
 from .auth import login_required
 from .db import execute, fetch_all, fetch_one
-from .validation import optional_text, required_text
+from .validation import optional_text, parse_phone, required_text
 
 
 clients_bp = Blueprint("clients", __name__, url_prefix="/api/clients")
@@ -48,9 +48,9 @@ def list_clients():
 def create_client():
     payload = request.get_json(silent=True) or {}
     try:
-        name = required_text(payload, "name", "Name")
-        phone = required_text(payload, "phone", "Phone")
-        email = optional_text(payload, "email")
+        name = required_text(payload, "name", "Name", min_length=2, max_length=80)
+        phone = parse_phone(payload, "phone", "Phone")
+        email = optional_text(payload, "email", max_length=120)
         notes = optional_text(payload, "notes")
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
@@ -71,9 +71,9 @@ def create_client():
 def update_client(client_id):
     payload = request.get_json(silent=True) or {}
     try:
-        name = required_text(payload, "name", "Name")
-        phone = required_text(payload, "phone", "Phone")
-        email = optional_text(payload, "email")
+        name = required_text(payload, "name", "Name", min_length=2, max_length=80)
+        phone = parse_phone(payload, "phone", "Phone")
+        email = optional_text(payload, "email", max_length=120)
         notes = optional_text(payload, "notes")
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400

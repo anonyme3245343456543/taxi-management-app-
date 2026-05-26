@@ -1,26 +1,38 @@
 import json
 import os
+import re
 import urllib.request
 
 from flask import current_app
 
 
+CONTROL_CHARS_PATTERN = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def safe_telegram_value(value, limit=500):
+    value = "-" if value in (None, "") else str(value)
+    value = CONTROL_CHARS_PATTERN.sub(" ", value)
+    value = value.replace("<", "‹").replace(">", "›")
+    value = " ".join(value.split())
+    return value[:limit] or "-"
+
+
 def format_booking_notification(booking):
-    notes = booking.get("notes") or "-"
+    notes = safe_telegram_value(booking.get("notes") or "-")
     booking_type = booking.get("booking_type") or "scheduled"
     booking_type_label = "Immediate (within the hour)" if booking_type == "immediate" else "Scheduled"
     return "\n".join(
         [
             "New taxi booking",
             "",
-            f"Client: {booking['name']}",
-            f"Phone: {booking['phone']}",
+            f"Client: {safe_telegram_value(booking['name'], 100)}",
+            f"Phone: {safe_telegram_value(booking['phone'], 40)}",
             f"Booking type: {booking_type_label}",
-            f"Pickup: {booking['pickup_address']}",
-            f"Destination: {booking['destination']}",
-            f"Date: {booking['date']}",
-            f"Time: {booking['time']}",
-            f"Passengers: {booking['passenger_count']}",
+            f"Pickup: {safe_telegram_value(booking['pickup_address'], 240)}",
+            f"Destination: {safe_telegram_value(booking['destination'], 240)}",
+            f"Date: {safe_telegram_value(booking['date'], 20)}",
+            f"Time: {safe_telegram_value(booking['time'], 20)}",
+            f"Passengers: {safe_telegram_value(booking['passenger_count'], 10)}",
             f"Notes: {notes}",
         ]
     )

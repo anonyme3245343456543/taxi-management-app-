@@ -8,6 +8,7 @@ from .validation import (
     parse_date,
     parse_money,
     parse_passenger_count,
+    parse_phone,
     parse_status,
     parse_time,
     required_text,
@@ -59,15 +60,15 @@ def list_appointments():
 
 
 def _appointment_payload(payload):
-    name = required_text(payload, "client_name", "Client name")
-    phone = required_text(payload, "client_phone", "Client phone")
+    name = required_text(payload, "client_name", "Client name", min_length=2, max_length=80)
+    phone = parse_phone(payload, "client_phone", "Client phone")
     client_notes = optional_text(payload, "client_notes")
     client = find_or_create_client(name, phone, client_notes)
 
     return {
         "client_id": client["id"],
-        "pickup_address": required_text(payload, "pickup_address", "Pickup address"),
-        "destination": required_text(payload, "destination", "Destination"),
+        "pickup_address": required_text(payload, "pickup_address", "Pickup address", min_length=5, max_length=220),
+        "destination": required_text(payload, "destination", "Destination", min_length=5, max_length=220),
         "appointment_date": parse_date(payload),
         "appointment_time": parse_time(payload),
         "passenger_count": parse_passenger_count(payload),
